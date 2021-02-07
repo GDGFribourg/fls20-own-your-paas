@@ -16,17 +16,6 @@ data "exoscale_compute_template" "ubuntu" {
   name = "Linux Ubuntu 20.04 LTS 64-bit"
 }
 
-resource "exoscale_security_group" "web" {
-  name        = "web"
-  description = "Webservers"
-
-  tags = {
-    kind = "web"
-  }
-}
-
-
-
 resource "exoscale_nlb" "main_load_balancer" {
   zone = local.zone
   name = "main-load-balancer"
@@ -50,6 +39,9 @@ resource "exoscale_instance_pool" "dokku_server" {
 #cloud-config
 package_upgrade: true
 runcmd:
+  - wget -nv -O - https://github.com/supcik.keys     | grep ed25519 | sed '1q;d' >> /home/ubuntu/.ssh/authorized_keys
+  - wget -nv -O - https://github.com/derlin.keys     | grep ed25519 | sed '1q;d' >> /home/ubuntu/.ssh/authorized_keys
+  - wget -nv -O - https://github.com/damieng002.keys | grep ed25519 | sed '1q;d' >> /home/ubuntu/.ssh/authorized_keys
   - echo "dokku dokku/web_config boolean false"              | debconf-set-selections
   - echo "dokku dokku/vhost_enable boolean true"             | debconf-set-selections
   - echo "dokku dokku/hostname string dokku.isc.heia-fr.ch"  | debconf-set-selections
