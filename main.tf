@@ -16,6 +16,17 @@ data "exoscale_compute_template" "ubuntu" {
   name = "Linux Ubuntu 20.04 LTS 64-bit"
 }
 
+resource "exoscale_security_group" "web" {
+  name        = "web"
+  description = "Webservers"
+
+  tags = {
+    kind = "web"
+  }
+}
+
+
+
 resource "exoscale_nlb" "main_load_balancer" {
   zone = local.zone
   name = "main-load-balancer"
@@ -56,7 +67,7 @@ runcmd:
   - [ dokku, "domains:set-global", dokku.isc.heia-fr.ch ]
   - wget -nv -O - https://github.com/supcik.keys     | grep ed25519 | sed '1q;d' | dokku ssh-keys:add jacques
   - wget -nv -O - https://github.com/derlin.keys     | grep ed25519 | sed '1q;d' | dokku ssh-keys:add lucy
-  - wget -nv -O - https://github.com/damieng002.keys | sed '1q;d' | dokku ssh-keys:add damien
+  - wget -nv -O - https://github.com/damieng002.keys | grep ed25519 | sed '1q;d' | dokku ssh-keys:add damien
   - [ dokku, plugin:install, https://github.com/dokku/dokku-letsencrypt.git ]
 EOF
 }
