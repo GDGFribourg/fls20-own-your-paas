@@ -9,6 +9,21 @@ terraform {
 
 locals {
   zone = "ch-gva-2"
+  vhost = "dokku-demo.isc.heia-fr.ch"
+}
+resource "exoscale_security_group" "webservers" {
+  name        = "web"
+  description = "Webservers"
+}
+
+resource "exoscale_security_group_rules" "web" {
+  security_group_id = exoscale_security_group.webservers.id
+
+  ingress {
+    protocol  = "TCP"
+    ports     = ["22", "80", "443"]
+    cidr_list = ["0.0.0.0/0", "::/0"]
+  }
 }
 
 data "exoscale_compute_template" "ubuntu" {
@@ -16,16 +31,11 @@ data "exoscale_compute_template" "ubuntu" {
   name = "Linux Ubuntu 20.04 LTS 64-bit"
 }
 
-resource "exoscale_nlb" "main_load_balancer" {
-  zone = local.zone
-  name = "main-load-balancer"
-  description = "Main Load Balancer"
-}
-
 resource "exoscale_instance_pool" "dokku_server" {
   zone = local.zone
   name = "dokku-server"
   template_id = data.exoscale_compute_template.ubuntu.id
+  security_group_ids = [exoscale_security_group.webservers.id]
   size = 1
   service_offering = "medium"
   disk_size = 50
@@ -44,7 +54,7 @@ runcmd:
   - wget -nv -O - https://github.com/damieng002.keys | grep ed25519 | sed '1q;d' >> /home/ubuntu/.ssh/authorized_keys
   - echo "dokku dokku/web_config boolean false"              | debconf-set-selections
   - echo "dokku dokku/vhost_enable boolean true"             | debconf-set-selections
-  - echo "dokku dokku/hostname string dokku.isc.heia-fr.ch"  | debconf-set-selections
+  - echo "dokku dokku/hostname string ${local.vhost}"        | debconf-set-selections
   - echo "dokku dokku/skip_key_file boolean true"            | debconf-set-selections
   - echo "dokku dokku/nginx_enable boolean true"             | debconf-set-selections
   - echo "dokku dokku/key_file string /root/.ssh/id_rsa.pub" | debconf-set-selections
@@ -56,7 +66,7 @@ runcmd:
   - [ apt-get, update,-qq ]
   - [ apt-get, -qq, -y, install, dokku ]
   - [ dokku, plugin:install-dependencies, --core ]
-  - [ dokku, "domains:set-global", dokku.isc.heia-fr.ch ]
+  - [ dokku, "domains:set-global", ${local.vhost} ]
   - wget -nv -O - https://github.com/supcik.keys     | grep ed25519 | sed '1q;d' | dokku ssh-keys:add jacques
   - wget -nv -O - https://github.com/derlin.keys     | grep ed25519 | sed '1q;d' | dokku ssh-keys:add lucy
   - wget -nv -O - https://github.com/damieng002.keys | grep ed25519 | sed '1q;d' | dokku ssh-keys:add damien
@@ -64,7 +74,15 @@ runcmd:
 EOF
 }
 
-resource "exoscale_nlb_service" "website" {
+# Load Balancer
+
+resource "exoscale_nlb" "main_load_balancer" {
+  zone = local.zone
+  name = "main-load-balancer"
+  description = "Main Load Balancer"
+}
+
+resource "exoscale_nlb_service" "https" {
   zone             = exoscale_nlb.main_load_balancer.zone
   name             = "dokku-https"
   description      = "Website over HTTPS"
@@ -77,5 +95,21 @@ resource "exoscale_nlb_service" "website" {
   healthcheck {
     mode     = "tcp"
     port     = 443
+  }
+}
+
+resource "exoscale_nlb_service" "http" {
+  zone             = exoscale_nlb.main_load_balancer.zone
+  name             = "dokku-http"
+  description      = "Website over HTTPS"
+  nlb_id           = exoscale_nlb.main_load_balancer.id
+  instance_pool_id = exoscale_instance_pool.dokku_server.id
+    protocol       = "tcp"
+    port           = 80
+    target_port    = 80
+
+  healthcheck {
+    mode     = "tcp"
+    port     = 80
   }
 }
