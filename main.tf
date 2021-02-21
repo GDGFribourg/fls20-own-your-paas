@@ -2,7 +2,7 @@ terraform {
   required_providers {
     exoscale = {
       source  = "exoscale/exoscale"
-      version = "0.21.1"
+      version = "0.22.0"
     }
   }
 }
@@ -10,6 +10,10 @@ terraform {
 locals {
   zone = "ch-gva-2"
   vhost = "dokku-demo.isc.heia-fr.ch"
+}
+
+resource "exoscale_ipaddress" "dokku_server" {
+    zone = local.zone
 }
 resource "exoscale_security_group" "webservers" {
   name        = "web"
@@ -31,13 +35,15 @@ data "exoscale_compute_template" "ubuntu" {
   name = "Linux Ubuntu 20.04 LTS 64-bit"
 }
 
-resource "exoscale_instance_pool" "dokku_server" {
+resource "exoscale_compute" "dokku_server" {
   zone = local.zone
-  name = "dokku-server"
+  display_name = "dokku-server"
+  state = "Running"
+  hostname = "dokku-demo"
+  keyboard = "fr-ch"
   template_id = data.exoscale_compute_template.ubuntu.id
   security_group_ids = [exoscale_security_group.webservers.id]
-  size = 1
-  service_offering = "medium"
+  size = "Medium"
   disk_size = 50
   key_pair     = "supcik@heia-fr"
 
@@ -74,42 +80,7 @@ runcmd:
 EOF
 }
 
-# Load Balancer
-
-resource "exoscale_nlb" "main_load_balancer" {
-  zone = local.zone
-  name = "main-load-balancer"
-  description = "Main Load Balancer"
-}
-
-resource "exoscale_nlb_service" "https" {
-  zone             = exoscale_nlb.main_load_balancer.zone
-  name             = "dokku-https"
-  description      = "Website over HTTPS"
-  nlb_id           = exoscale_nlb.main_load_balancer.id
-  instance_pool_id = exoscale_instance_pool.dokku_server.id
-    protocol       = "tcp"
-    port           = 443
-    target_port    = 443
-
-  healthcheck {
-    mode     = "tcp"
-    port     = 443
-  }
-}
-
-resource "exoscale_nlb_service" "http" {
-  zone             = exoscale_nlb.main_load_balancer.zone
-  name             = "dokku-http"
-  description      = "Website over HTTPS"
-  nlb_id           = exoscale_nlb.main_load_balancer.id
-  instance_pool_id = exoscale_instance_pool.dokku_server.id
-    protocol       = "tcp"
-    port           = 80
-    target_port    = 80
-
-  healthcheck {
-    mode     = "tcp"
-    port     = 80
-  }
+resource "exoscale_secondary_ipaddress" "dokku_server" {
+  compute_id = exoscale_compute.dokku_server.id
+  ip_address = exoscale_ipaddress.dokku_server.ip_address
 }

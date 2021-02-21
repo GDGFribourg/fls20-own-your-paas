@@ -14,9 +14,14 @@ Change the the base directory and type the following commands in your shell:
 
 ```
 PROJECT_BASE_DIR=$(pwd)
-VMIP=$(exo vm list --output-template '{{ .IPAddress }}' | head -1)
+
+VMIP=$(exo vm list --output-template '{{ .Name }}:{{ .IPAddress }}' | \
+	grep 'dokku-demo' | cut -f 2 -d ':')
+EIP=$(exo eip list --output-template '{{ .Instances }}:{{ .IPAddress }}' | \
+	grep 'dokku-demo' | cut -f 2 -d ':')
 echo "Project Base: $PROJECT_BASE_DIR"
 echo "VM IP Adddress: $VMIP"
+echo "VM EIP Adddress: $EIP"
 ```
 
 ## Build dokku-demo-site using Hugu and Caddy (on the notebook)

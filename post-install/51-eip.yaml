@@ -1,0 +1,10 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    lo:
+      match:
+        name: lo
+      addresses:
+        - 159.100.242.230/32
+
