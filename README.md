@@ -24,7 +24,7 @@ echo "VM IP Adddress: $VMIP"
 echo "VM EIP Adddress: $EIP"
 ```
 
-## Build dokku-demo-site using Hugu and Caddy (on the notebook)
+## Build dokku-demo-site using Hugo and Caddy (on the notebook)
 
 type the following commands in your shell:
 

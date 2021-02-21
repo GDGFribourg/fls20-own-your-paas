@@ -1,2 +1,1 @@
-terraform destroy \
-  -target exoscale_compute.dokku_server
+terraform destroy -target exoscale_compute.dokku_server
