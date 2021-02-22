@@ -11,12 +11,24 @@ EIP=$(exo eip list --output-template '{{ .Instances }}:{{ .IPAddress }}' | \
 
 echo "Configuring $VMIP/$EIP"
 
+cat > post-install/51-eip.yaml <<-EOF
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    lo:
+      match:
+        name: lo
+      addresses:
+        - ${EIP}/32
+EOF
+
+
 tar czf post-install.tar.gz post-install
 scp post-install.tar.gz ubuntu@$VMIP:
 ssh ubuntu@$VMIP <<EOF
 tar xzf post-install.tar.gz
 cd post-install
 sudo bash ./apply.sh
-/sbin/ip addr
 EOF
 
