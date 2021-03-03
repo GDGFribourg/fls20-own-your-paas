@@ -15,6 +15,7 @@ locals {
 resource "exoscale_ipaddress" "dokku_server" {
     zone = local.zone
 }
+
 resource "exoscale_security_group" "webservers" {
   name        = "web"
   description = "Webservers"
@@ -67,6 +68,7 @@ runcmd:
   - [ apt-get, update, -qq ]
   - [ apt-get, -qq, -y, --no-install-recommends, install, apt-transport-https ]
   - wget -nv -O - https://get.docker.com/ | sh
+  - [ gpasswd, -a, ubuntu, docker ]
   - wget -nv -O - https://packagecloud.io/dokku/dokku/gpgkey | apt-key add -
   - echo "deb https://packagecloud.io/dokku/dokku/ubuntu/ focal main" | sudo tee /etc/apt/sources.list.d/dokku.list
   - [ apt-get, update,-qq ]

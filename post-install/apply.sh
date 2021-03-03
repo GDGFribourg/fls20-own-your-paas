@@ -5,4 +5,4 @@ set -o pipefail
 set -o nounset
 
 cp ./51-eip.yaml /etc/netplan/51-eip.yaml
-sudo netplan apply
+netplan apply
